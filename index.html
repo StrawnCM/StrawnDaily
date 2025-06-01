@@ -6,9 +6,23 @@
     <title>Strawn Daily Newsletter</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: Georgia, "Times New Roman", serif;
             margin: 20px;
             background: #f0f0f0;
+        }
+        h1 {
+            font-family: "Playfair Display", Didot, Bodoni, serif;
+            text-align: center;
+            font-size: 64px;
+            margin: 0 0 10px 0;
+            letter-spacing: 4px;
+        }
+        #dateLine {
+            font-family: "Playfair Display", Didot, Bodoni, serif;
+            text-align: center;
+            font-size: 18px;
+            margin: 0 0 20px 0;
+            letter-spacing: 1px;
         }
         .container {
             max-width: 800px;
@@ -42,7 +56,8 @@
 </head>
 <body>
     <div class="container">
-        <h1>Strawn Daily</h1>
+        <h1>The Strawn Daily</h1>
+        <div id="dateLine"></div>
         <label for="titleInput">Article Title</label>
         <input id="titleInput" type="text" placeholder="Enter title" />
 
@@ -69,6 +84,13 @@
         lines.push(line.trim());
         return lines;
     }
+
+    // Populate the date line on load
+    document.getElementById('dateLine').textContent = new Date().toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+    });
 
     function generateNewsletter() {
         const title = document.getElementById('titleInput').value;
@@ -134,18 +156,53 @@
         bg.onload = function() {
             ctx.drawImage(bg, 0, 0, width, height);
 
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 32px sans-serif';
-            ctx.fillText(title, 20, 50);
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'center';
 
-            ctx.font = '16px sans-serif';
-            const lines = wrapText(ctx, content, width - 40);
-            let y = 90;
-            const lineHeight = 22;
+            // Masthead
+            ctx.font = '700 64px "Playfair Display", Didot, Bodoni, serif';
+            ctx.fillText('The Strawn Daily', width / 2, 80);
+
+            // Date line
+            ctx.font = '400 20px "Playfair Display", Didot, Bodoni, serif';
+            const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            ctx.fillText(date, width / 2, 110);
+
+            // Horizontal rule
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(width * 0.1, 130);
+            ctx.lineTo(width * 0.9, 130);
+            ctx.stroke();
+
+            // Article title
+            ctx.font = '700 36px "Playfair Display", Didot, Bodoni, serif';
+            const titleLines = wrapText(ctx, title.toUpperCase(), width * 0.8);
+            let y = 170;
+            const titleLineHeight = 40;
+            titleLines.forEach(line => {
+                ctx.fillText(line, width / 2, y);
+                y += titleLineHeight;
+            });
+            y += 10;
+
+            // Body copy
+            ctx.textAlign = 'left';
+            ctx.font = '20px Georgia, "Times New Roman", serif';
+            const lines = wrapText(ctx, content, width - 80);
+            const lineHeight = 26;
+            const startX = width * 0.1;
             lines.forEach(line => {
-                ctx.fillText(line, 20, y);
+                ctx.fillText(line, startX, y);
                 y += lineHeight;
             });
+
+            // Final horizontal rule
+            y += 20;
+            ctx.beginPath();
+            ctx.moveTo(width * 0.1, y);
+            ctx.lineTo(width * 0.9, y);
+            ctx.stroke();
 
             const link = document.createElement('a');
             link.download = 'newsletter.png';
