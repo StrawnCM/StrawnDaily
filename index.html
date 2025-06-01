@@ -31,6 +31,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #ccc;
         }
         input[type="text"], textarea {
             width: 100%;
@@ -68,20 +69,26 @@
     </div>
     <script>
     function wrapText(ctx, text, maxWidth) {
-        const words = text.split(' ');
+        const paragraphs = text.split(/\r?\n/);
         const lines = [];
-        let line = '';
-        for (let i = 0; i < words.length; i++) {
-            const testLine = line + words[i] + ' ';
-            const metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth && i > 0) {
-                lines.push(line.trim());
-                line = words[i] + ' ';
-            } else {
-                line = testLine;
+        paragraphs.forEach((paragraph, pIdx) => {
+            const words = paragraph.split(' ');
+            let line = '';
+            words.forEach((word, idx) => {
+                const testLine = line + word + ' ';
+                const metrics = ctx.measureText(testLine);
+                if (metrics.width > maxWidth && idx > 0) {
+                    lines.push(line.trim());
+                    line = word + ' ';
+                } else {
+                    line = testLine;
+                }
+            });
+            lines.push(line.trim());
+            if (pIdx < paragraphs.length - 1) {
+                lines.push('');
             }
-        }
-        lines.push(line.trim());
+        });
         return lines;
     }
 
