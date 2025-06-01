@@ -211,6 +211,12 @@
             ctx.lineTo(width * 0.9, y);
             ctx.stroke();
 
+            // Right border
+            ctx.beginPath();
+            ctx.moveTo(width - 1, 0);
+            ctx.lineTo(width - 1, height);
+            ctx.stroke();
+
             const link = document.createElement('a');
             link.download = 'newsletter.png';
             link.href = canvas.toDataURL('image/png');
