@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strawn Daily Newsletter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Strawn Daily</h1>
+        <label for="titleInput">Article Title</label>
+        <input id="titleInput" type="text" placeholder="Enter title" />
+
+        <label for="contentInput">Article Content</label>
+        <textarea id="contentInput" rows="10" placeholder="Enter article content"></textarea>
+
+        <button onclick="generateNewsletter()">Generate Newsletter</button>
+    </div>
+    <script>
+    function wrapText(ctx, text, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let line = '';
+        for (let i = 0; i < words.length; i++) {
+            const testLine = line + words[i] + ' ';
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth && i > 0) {
+                lines.push(line.trim());
+                line = words[i] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        lines.push(line.trim());
+        return lines;
+    }
+
+    function generateNewsletter() {
+        const title = document.getElementById('titleInput').value;
+        const content = document.getElementById('contentInput').value;
+        const canvas = document.createElement('canvas');
+        const width = 800;
+        const height = 600;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.fillText(title, 20, 50);
+
+        ctx.font = '16px sans-serif';
+        const lines = wrapText(ctx, content, width - 40);
+        let y = 90;
+        const lineHeight = 22;
+        lines.forEach(line => {
+            ctx.fillText(line, 20, y);
+            y += lineHeight;
+        });
+
+        const link = document.createElement('a');
+        link.download = 'newsletter.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+    </script>
+</body>
+</html>
