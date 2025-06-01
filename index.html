@@ -80,26 +80,30 @@
         canvas.height = height;
         const ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
+        // Load the background image
+        const bg = new Image();
+        bg.onload = function() {
+            ctx.drawImage(bg, 0, 0, width, height);
 
-        ctx.fillStyle = '#000000';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText(title, 20, 50);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 32px sans-serif';
+            ctx.fillText(title, 20, 50);
 
-        ctx.font = '16px sans-serif';
-        const lines = wrapText(ctx, content, width - 40);
-        let y = 90;
-        const lineHeight = 22;
-        lines.forEach(line => {
-            ctx.fillText(line, 20, y);
-            y += lineHeight;
-        });
+            ctx.font = '16px sans-serif';
+            const lines = wrapText(ctx, content, width - 40);
+            let y = 90;
+            const lineHeight = 22;
+            lines.forEach(line => {
+                ctx.fillText(line, 20, y);
+                y += lineHeight;
+            });
 
-        const link = document.createElement('a');
-        link.download = 'newsletter.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+            const link = document.createElement('a');
+            link.download = 'newsletter.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        };
+        bg.src = 'paper.png';
     }
     </script>
 </body>
