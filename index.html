@@ -69,7 +69,7 @@
     </div>
     <script>
     function wrapText(ctx, text, maxWidth) {
-        const paragraphs = text.split(/\r?\n/);
+        const paragraphs = text.split(/\r\n|\n|\r/);
         const lines = [];
         paragraphs.forEach((paragraph, pIdx) => {
             const words = paragraph.split(' ');
