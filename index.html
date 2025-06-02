@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Strawn Daily Newsletter</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: Georgia, "Times New Roman", serif;
@@ -33,25 +36,46 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             border: 1px solid #ccc;
         }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
         input[type="text"], textarea {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
             border: 1px solid #ccc;
             border-radius: 4px;
             font-size: 16px;
+            box-sizing: border-box;
         }
         button {
             background: #007bff;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            margin-right: 10px;
         }
         button:hover {
             background: #0056b3;
+        }
+        .preview-container {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #previewCanvas {
+            border: 1px solid #ccc;
+            max-width: 100%;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -59,171 +83,245 @@
     <div class="container">
         <h1>The Strawn Daily</h1>
         <div id="dateLine"></div>
-        <label for="titleInput">Article Title</label>
-        <input id="titleInput" type="text" placeholder="Enter title" />
+        
+        <div class="form-group">
+            <label for="titleInput">Article Title</label>
+            <input id="titleInput" type="text" placeholder="Enter title" value="MULTI-SCALE PROJECT MANAGEMENT WORK SCHEDULE" />
+        </div>
 
-        <label for="contentInput">Article Content</label>
-        <textarea id="contentInput" rows="10" placeholder="Enter article content"></textarea>
+        <div class="form-group">
+            <label for="contentInput">Article Content</label>
+            <textarea id="contentInput" rows="15" placeholder="Enter article content">Each day, start by creating a plan broken into 90-minute chunks. Identify what you'll work on during each block. Your daily responsibilities must include reviewing and following up on all open Submittals, RFIs, changes & cost items. You are "working your lists". Check the schedule for activities that are supposed to start or finish that day and verify whether they actually did. If you're waiting on someone for an open item, make sure you follow up with them or note when you'll follow up.
 
-        <button onclick="generateNewsletter()">Generate Newsletter</button>
+On a weekly basis, focus on the three-week lookahead schedule, prepare for the weekly meeting, and complete any tasks assigned during that meeting. Monthly milestones include updating the master schedule, forecasting the budget, submitting invoices and writing your executive summary reports. These activities are all interconnected: the consistency of your daily schedule check-ins supports a stronger lookahead, which in turn strengthens your master schedule.
+
+To stay on top of your responsibilities, you must constantly monitor and check in on your various tasks and mini-projects. If you're blocked, raise the flag early. Don't let tasks sit and become stagnant. When something drags on too long, momentum is lost, and you often have to start over. You want to be obsessive about finishing tasks. Keep the number of spinning plates to a minimum and join the "cult of done": once a task is finished, it frees you to move on to the next one, which is essential in construction, where work follows a strict sequence.
+
+Letting your day be dictated by your inbox is a trap. If email dominates your time, other people are controlling your productivity. Construction workflows aren't new. Submittals have been around since ancient times, like when someone first showed a clay brick to a village chief for approval. If you spend just 30 minutes each day pushing submittals forward, you're controlling the work rather than being controlled by it.</textarea>
+        </div>
+
+        <button onclick="generateNewsletter()" id="generateBtn">Generate Newsletter</button>
+        <button onclick="downloadNewsletter()" id="downloadBtn" style="display:none;">Download PNG</button>
+        
+        <div class="preview-container">
+            <canvas id="previewCanvas" style="display:none;"></canvas>
+        </div>
     </div>
+
     <script>
-    function wrapText(ctx, text, maxWidth) {
-        const paragraphs = text.split(/\r\n|\n|\r/);
-        const lines = [];
-        paragraphs.forEach((paragraph, pIdx) => {
-            const words = paragraph.split(' ');
-            let line = '';
-            words.forEach((word, idx) => {
-                const testLine = line + word + ' ';
-                const metrics = ctx.measureText(testLine);
-                if (metrics.width > maxWidth && idx > 0) {
+        // Populate the date line on load
+        document.getElementById('dateLine').textContent = new Date().toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+
+        let generatedCanvas = null;
+
+        function wrapText(ctx, text, maxWidth) {
+            const paragraphs = text.split(/\r\n|\n|\r/);
+            const lines = [];
+            
+            paragraphs.forEach((paragraph, pIdx) => {
+                if (paragraph.trim() === '') {
+                    lines.push('');
+                    return;
+                }
+                
+                const words = paragraph.split(' ');
+                let line = '';
+                
+                words.forEach((word, idx) => {
+                    const testLine = line + word + ' ';
+                    const metrics = ctx.measureText(testLine);
+                    
+                    if (metrics.width > maxWidth && idx > 0) {
+                        lines.push(line.trim());
+                        line = word + ' ';
+                    } else {
+                        line = testLine;
+                    }
+                });
+                
+                if (line.trim()) {
                     lines.push(line.trim());
-                    line = word + ' ';
-                } else {
-                    line = testLine;
+                }
+                
+                // Add spacing between paragraphs
+                if (pIdx < paragraphs.length - 1) {
+                    lines.push('');
                 }
             });
-            lines.push(line.trim());
-            if (pIdx < paragraphs.length - 1) {
-                lines.push('');
+            
+            return lines;
+        }
+
+        function calculateRequiredHeight(title, content) {
+            // Create a temporary canvas to measure text
+            const tempCanvas = document.createElement('canvas');
+            const ctx = tempCanvas.getContext('2d');
+            
+            let height = 200; // Header space
+            
+            // Measure title
+            ctx.font = 'bold 36px "Playfair Display", serif';
+            const titleLines = wrapText(ctx, title.toUpperCase(), 640);
+            height += titleLines.length * 45 + 30;
+            
+            // Measure content
+            ctx.font = '20px Georgia, serif';
+            const contentLines = wrapText(ctx, content, 640);
+            height += contentLines.length * 28 + 60;
+            
+            return Math.max(1000, height);
+        }
+
+        function createAgedPaperBackground(width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // Base paper color - warm cream
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#f8f5f0');
+            gradient.addColorStop(0.3, '#f4f1e8');
+            gradient.addColorStop(0.7, '#f0ead8');
+            gradient.addColorStop(1, '#ede6d3');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Add subtle aging spots
+            ctx.globalCompositeOperation = 'multiply';
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * width;
+                const y = Math.random() * height;
+                const radius = Math.random() * 20 + 5;
+                const opacity = Math.random() * 0.1 + 0.05;
+                
+                const spotGradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
+                spotGradient.addColorStop(0, `rgba(139, 119, 89, ${opacity})`);
+                spotGradient.addColorStop(1, 'rgba(139, 119, 89, 0)');
+                
+                ctx.fillStyle = spotGradient;
+                ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
             }
-        });
-        return lines;
-    }
+            
+            ctx.globalCompositeOperation = 'source-over';
+            return canvas;
+        }
 
-    // Populate the date line on load
-    document.getElementById('dateLine').textContent = new Date().toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-    });
-
-    function generateNewsletter() {
-        const title = document.getElementById('titleInput').value;
-        const content = document.getElementById('contentInput').value;
-        const canvas = document.createElement('canvas');
-        const width = 800;
-        const height = 1000;
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-
-        // Load the SVG background
-        const svgBackground = `<svg width="800" height="1000" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <!-- Paper texture gradient -->
-    <linearGradient id="paperBase" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#f4f1e8;stop-opacity:1" />
-      <stop offset="25%" style="stop-color:#f0ead8;stop-opacity:1" />
-      <stop offset="50%" style="stop-color:#ede6d3;stop-opacity:1" />
-      <stop offset="75%" style="stop-color:#e8dfc8;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#e3d8bd;stop-opacity:1" />
-    </linearGradient>
-    
-    <!-- Age spots and discoloration -->
-    <filter id="ageSpots">
-      <feTurbulence baseFrequency="0.9" numOctaves="4" result="noise"/>
-      <feColorMatrix in="noise" type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncA type="discrete" tableValues="0 .5 0 0 0 .75 0 .25 0 0"/>
-      </feComponentTransfer>
-      <feColorMatrix type="matrix" values="0 0 0 0 0.7
-                                           0 0 0 0 0.6
-                                           0 0 0 0 0.4
-                                           0 0 0 1 0"/>
-      <feComposite operator="multiply" in2="SourceGraphic"/>
-    </filter>
-    
-    <!-- Subtle paper grain -->
-    <filter id="paperGrain">
-      <feTurbulence baseFrequency="0.04" numOctaves="2" result="grain"/>
-      <feColorMatrix in="grain" type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncA type="discrete" tableValues="0 0.1 0.05 0.15 0.08"/>
-      </feComponentTransfer>
-      <feColorMatrix type="matrix" values="0 0 0 0 0.85
-                                           0 0 0 0 0.75
-                                           0 0 0 0 0.6
-                                           0 0 0 1 0"/>
-      <feComposite operator="multiply" in2="SourceGraphic"/>
-    </filter>
-  </defs>
-  
-  <!-- Base paper color -->
-  <rect width="100%" height="100%" fill="url(#paperBase)"/>
-  
-  
-  
-  <!-- Final subtle texture overlay -->
-  <rect width="100%" height="100%" fill="white" opacity="0.01" filter="url(#paperGrain)"/>
-</svg>`;
-
-        const bg = new Image();
-        bg.onload = function() {
-            ctx.drawImage(bg, 0, 0, width, height);
-
-            ctx.fillStyle = '#000';
+        async function generateNewsletter() {
+            const generateBtn = document.getElementById('generateBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const canvas = document.getElementById('previewCanvas');
+            
+            generateBtn.textContent = 'Generating...';
+            generateBtn.classList.add('loading');
+            
+            const title = document.getElementById('titleInput').value || 'Untitled Article';
+            const content = document.getElementById('contentInput').value || 'No content provided.';
+            
+            const width = 800;
+            const height = calculateRequiredHeight(title, content);
+            
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.display = 'block';
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Wait for fonts to load
+            await document.fonts.ready;
+            
+            // Create and draw background
+            const background = createAgedPaperBackground(width, height);
+            ctx.drawImage(background, 0, 0);
+            
+            // Set up text properties
+            ctx.fillStyle = '#2c2c2c';
             ctx.textAlign = 'center';
-
-            // Masthead
-            ctx.font = '700 64px "Playfair Display", Didot, Bodoni, serif';
+            
+            // Header - The Strawn Daily
+            ctx.font = 'bold 64px "Playfair Display", serif';
+            ctx.letterSpacing = '4px';
             ctx.fillText('The Strawn Daily', width / 2, 80);
-
+            
             // Date line
-            ctx.font = '400 20px "Playfair Display", Didot, Bodoni, serif';
-            const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            ctx.font = '400 20px "Playfair Display", serif';
+            ctx.letterSpacing = '1px';
+            const date = new Date().toLocaleDateString('en-US', { 
+                month: 'long', 
+                day: 'numeric', 
+                year: 'numeric' 
+            });
             ctx.fillText(date, width / 2, 110);
-
-            // Horizontal rule
+            
+            // Horizontal rule under header
+            ctx.strokeStyle = '#2c2c2c';
             ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.moveTo(width * 0.1, 130);
-            ctx.lineTo(width * 0.9, 130);
+            ctx.moveTo(80, 130);
+            ctx.lineTo(width - 80, 130);
             ctx.stroke();
-
+            
             // Article title
-            ctx.font = '700 36px "Playfair Display", Didot, Bodoni, serif';
-            const titleLines = wrapText(ctx, title.toUpperCase(), width * 0.8);
-            let y = 170;
-            const titleLineHeight = 40;
+            ctx.font = 'bold 36px "Playfair Display", serif';
+            ctx.letterSpacing = '2px';
+            const titleLines = wrapText(ctx, title.toUpperCase(), width - 160);
+            let y = 180;
+            
             titleLines.forEach(line => {
                 ctx.fillText(line, width / 2, y);
-                y += titleLineHeight;
+                y += 45;
             });
-            y += 10;
-
-            // Body copy
+            
+            y += 20;
+            
+            // Body content
             ctx.textAlign = 'left';
             ctx.font = '20px Georgia, "Times New Roman", serif';
-            const lines = wrapText(ctx, content, width - 80);
-            const lineHeight = 26;
-            const startX = width * 0.1;
-            lines.forEach(line => {
-                ctx.fillText(line, startX, y);
-                y += lineHeight;
+            ctx.letterSpacing = '0px';
+            const contentLines = wrapText(ctx, content, width - 160);
+            const startX = 80;
+            
+            contentLines.forEach(line => {
+                if (line === '') {
+                    y += 14; // Paragraph spacing
+                } else {
+                    ctx.fillText(line, startX, y);
+                }
+                y += 28;
             });
-
-            // Final horizontal rule
+            
+            // Bottom rule
             y += 20;
+            ctx.strokeStyle = '#2c2c2c';
             ctx.beginPath();
-            ctx.moveTo(width * 0.1, y);
-            ctx.lineTo(width * 0.9, y);
+            ctx.moveTo(80, y);
+            ctx.lineTo(width - 80, y);
             ctx.stroke();
+            
+            // Border
+            ctx.strokeStyle = '#ccc';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(0, 0, width, height);
+            
+            generatedCanvas = canvas;
+            generateBtn.textContent = 'Generate Newsletter';
+            generateBtn.classList.remove('loading');
+            downloadBtn.style.display = 'inline-block';
+        }
 
-            // Right border
-            ctx.beginPath();
-            ctx.moveTo(width - 1, 0);
-            ctx.lineTo(width - 1, height);
-            ctx.stroke();
-
+        function downloadNewsletter() {
+            if (!generatedCanvas) return;
+            
             const link = document.createElement('a');
-            link.download = 'newsletter.png';
-            link.href = canvas.toDataURL('image/png');
+            link.download = `strawn-daily-${new Date().toISOString().split('T')[0]}.png`;
+            link.href = generatedCanvas.toDataURL('image/png', 1.0);
             link.click();
-        };
-        bg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgBackground);
-    }
+        }
     </script>
 </body>
 </html>
