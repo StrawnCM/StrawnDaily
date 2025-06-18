@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kbuilder-project name="SampleProject" version="1.0">
+    <description>Example project for Kahua Kbuilder.</description>
+    <form id="SampleForm">
+        <field name="Title" type="text" required="true"/>
+        <field name="Description" type="textarea"/>
+    </form>
+    <workflow id="SampleWorkflow">
+        <state id="start" name="Start"/>
+        <state id="review" name="Review"/>
+        <state id="complete" name="Complete"/>
+        <transition from="start" to="review"/>
+        <transition from="review" to="complete"/>
+    </workflow>
+</kbuilder-project>
